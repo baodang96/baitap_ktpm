@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: cms_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: cms_db
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    container_name: cms_backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+
+  frontend:
+    build: ./frontend
+    container_name: cms_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
