@@ -1,17 +1,19 @@
-FROM node:18
+# Stage 1: build React
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-
-RUN npm install
+RUN npm ci
 
 COPY . .
-
 RUN npm run build
 
-RUN npm install -g serve
+# Stage 2: serve bằng nginx
+FROM nginx:alpine
 
-EXPOSE 3000
+COPY --from=builder /app/build /usr/share/nginx/html
 
-CMD ["serve", "-s", "build"]
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
