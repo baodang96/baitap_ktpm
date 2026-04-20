@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: food-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - JWT_SECRET=mini-food-ordering-secret-key-2024
+      - DB_HOST=mariadb
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=food_ordering_db
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    networks:
+      - food-network
+
+  food-service:
+    build:
+      context: .
+      dockerfile: food-service/Dockerfile
+    container_name: food-food-service
+    ports:
+      - "8082:8082"
+    environment:
+      - DB_HOST=mariadb
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=food_ordering_db
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    networks:
+      - food-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: food-order-service
+    ports:
+      - "8083:8083"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8081
+      - FOOD_SERVICE_URL=http://food-service:8082
+      - DB_HOST=mariadb
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=food_ordering_db
+    depends_on:
+      - mariadb
+      - user-service
+      - food-service
+    restart: unless-stopped
+    networks:
+      - food-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: food-payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      - ORDER_SERVICE_URL=http://order-service:8083
+      - DB_HOST=mariadb
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=food_ordering_db
+    depends_on:
+      - mariadb
+      - order-service
+    restart: unless-stopped
+    networks:
+      - food-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: food-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - user-service
+      - food-service
+      - order-service
+      - payment-service
+    restart: unless-stopped
+    networks:
+      - food-network
+
+  mariadb:
+    image: mariadb:10
+    container_name: food-mariadb
+    ports:
+      - "3306:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_DATABASE=food_ordering_db
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+      - mariadb_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - food-network
+
+networks:
+  food-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
